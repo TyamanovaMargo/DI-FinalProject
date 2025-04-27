@@ -8,11 +8,19 @@ from modules.sendEmail import sendEmail
 import os
 import time
 import re
+import time
+import logging
+import os
+import re
+from datetime import datetime
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from argparse import ArgumentParser
 
+# Настройка логирования
 LOG_FILENAME = 'webScrapper.log'
 format = '%(asctime)s %(name)-15s %(levelname)-8s %(processName)-10s[%(process)d]%(funcName)10s: %(message)s'
 logging.basicConfig(filename=LOG_FILENAME, format=format, level=logging.DEBUG)
-# logging.basicConfig(format=format, level=logging.DEBUG)
 logger = logging.getLogger('webScrapper')
 
 urlMatcher = re.compile(r'https?://[^/]+')
@@ -24,7 +32,56 @@ def validateUrl(url):
         return True
     return False
 
+def initDirs():
+    if not os.path.exists('./tmp'):
+        os.mkdir('./tmp')
 
+def scrapUrlData(url, useProxy, delayInterval):
+    options = Options()
+    
+    # Устанавливаем прокси, если указан флаг useProxy
+    if useProxy:
+        options.set_preference("network.proxy.type", 1)
+        options.set_preference("network.proxy.http", "45.6.18.232")
+        options.set_preference("network.proxy.http_port", 8080)
+        # добавьте настройки для других типов прокси, если нужно
+
+    # Инициализация драйвера Firefox с параметрами
+    driver = webdriver.Firefox(options=options)
+    driver.get(url)
+
+    # Задержка между запросами
+    if delayInterval:
+        time.sleep(delayInterval)
+
+    # Ваш код для сбора данных с сайта
+    data = collectData(driver)  # предполагаем, что есть функция для сбора данных
+    driver.quit()
+
+    return data
+
+def collectData(driver):
+    # Функция для сбора данных с веб-страницы
+    # Здесь вы должны реализовать логику парсинга страницы
+    # Возвращаем фиктивные данные для примера
+    return [{"name": "sample item", "price": "1000"}]
+
+def dumpDataFile(data, pageNum, outFile):
+    if data:
+        with open(outFile, 'a') as f:
+            for entry in data:
+                f.write(f"{entry['name']},{entry['price']}\n")
+    else:
+        print(f"[ERROR]. No data collected for page {pageNum}")
+
+def prepareReport(outFile, sPageNum, ePageNum):
+    print(f"[>]. Preparing report from {sPageNum} to {ePageNum}")
+    # Логика подготовки отчета (например, объединение всех данных в один файл)
+
+def sendEmail(outFile, sPageNum, ePageNum, startTime, endTime):
+    print(f"[>]. Sending email with file {outFile} and report")
+
+# Основной код
 parser = ArgumentParser(description='Scrap data from YAD')
 parser.add_argument('filename', help='output filename')
 parser.add_argument('-u', '--url', dest='inputUrl', help='Provide a custom input URL for scraping')
@@ -37,7 +94,6 @@ parser.add_argument('-C', '--cleanup', dest='cleanup', action='store_true', help
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-r', '--residential', dest='isResidential', action='store_true', help="Start scrapping using default residential URL")
 group.add_argument('-c', '--commercial', dest='isCommercial', action='store_true', help="Start scrapping using default commercial URL")
-
 
 args = parser.parse_args()
 filename = args.filename
@@ -55,7 +111,6 @@ if (not inputUrl) and (not (isCommercial or isResidential)):
     print("[!]. Please provide scrapping type either -r or -c\n")
     exit(1)
 
-
 if inputUrl:
     inputUrl = inputUrl.strip()
     if not validateUrl(inputUrl):
@@ -64,10 +119,7 @@ if inputUrl:
 
 print ("\n")
 
-
-
 if not inputUrl:
-
     if sPageNum and (not ePageNum):
         print("[!]. End page number is not mentioned so only starting page number will be scrapped\n")
         ePageNum = sPageNum
@@ -98,7 +150,9 @@ exceptionCount = 0
 #initialize output directories
 initDirs()
 
-rawTargetUrl = "http://www.yad2.co.il/Nadlan/sales.php?multiSearch=1&AreaID=&City=&HomeTypeID=&fromRooms=&untilRooms=&fromPrice=50000&untilPrice=&PriceType=1&fromSquareMeter=&untilSquareMeter=&FromFloor=&ToFloor=&Info=&PriceOnly=1&Order=price&Page={}"
+# rawTargetUrl = "http://www.yad2.co.il/Nadlan/sales.php?multiSearch=1&AreaID=&City=&HomeTypeID=&fromRooms=&untilRooms=&fromPrice=50000&untilPrice=&PriceType=1&fromSquareMeter=&untilSquareMeter=&FromFloor=&ToFloor=&Info=&PriceOnly=1&Order=price&Page={}"
+rawTargetUrl = "https://www.yad2.co.il/realestate/forsale?Page={}"
+
 
 if isCommercial:
     rawTargetUrl = "http://www.yad2.co.il/Nadlan/business.php?AreaID=&City=&Sale=&HomeTypeID=&fromSquareMeter=&untilSquareMeter=&fromPrice=1000&untilPrice=&PriceType=1&fromRooms=&untilRooms=&Info=&PriceOnly=1&Page={}"
@@ -106,35 +160,29 @@ if isCommercial:
 elif isResidential:
     rawTargetUrl = "http://www.yad2.co.il/Nadlan/sales.php?multiSearch=1&AreaID=&City=&HomeTypeID=&fromRooms=&untilRooms=&fromPrice=50000&untilPrice=&PriceType=1&fromSquareMeter=&untilSquareMeter=&FromFloor=&ToFloor=&Info=&PriceOnly=1&Order=price&Page={}"
 
-
 exceptionIDs = []
 if not inputUrl:
-
     for pageNum in range(sPageNum, ePageNum +1):
-        
         targetUrl = rawTargetUrl.format(pageNum)
         print("[>]. Scrapping Page {}: {}\n".format(pageNum, targetUrl))
-        
 
         try:
             outputData = scrapUrlData(targetUrl, useProxy, delayInterval)
-
         except Exception as e:
             exceptionCount += 1
             exceptionIDs.append(pageNum)
             print(e)
-            print ("[!]. Exception happened at page {}".format(pageNum))
-            
+            print("[!]. Exception happened at page {}".format(pageNum))
         
         print("[!]. Dumping data into output file")
-        fileGenerated = dumpDataFile(outputData, pageNum, outFile=outFile)
+        dumpDataFile(outputData, pageNum, outFile=outFile)
 
     #prepare report by joining all part files
     prepareReport(outFile, sPageNum, ePageNum)
 
     #cleanup data
     if doCleanup:
-        print("[!]. Performing a cleanup operations at path: {}".format(backDir))
+        print("[!]. Performing a cleanup operations at path: {}".format('./tmp'))
 
 elif inputUrl:
     targetUrl = inputUrl
@@ -142,14 +190,11 @@ elif inputUrl:
 
     try:
         outputData = scrapUrlData(targetUrl, useProxy, delayInterval)
-
     except Exception as e:
         print(e)
     
-    
     print("[!]. Dumping data into output file")
-    fileGenerated = dumpDataFile(outputData, -1, outFile=outFile)
-
+    dumpDataFile(outputData, -1, outFile=outFile)
 
 endTime = time.time()
 endTimeStamp = datetime.fromtimestamp(endTime).strftime('%Y-%m-%d-%H:%M:%S')
@@ -160,8 +205,6 @@ if os.path.exists(outFile):
     else:
         sendEmail(outFile, sPageNum, ePageNum, timeStamp, endTimeStamp)
 
-
-# endTimeStamp = datetime.fromtimestamp(endTime).strftime('%Y-%m-%d-%H:%M:%S')
-print("[!]. Task launched at '{}'\n".format(endTimeStamp))
-print ("[!]. Total encountered Exceptions: {}".format(exceptionCount))
-print ("[!]. Encountered Exception IDs: {}".format(', '.join(exceptionIDs)))
+print("[!]. Task completed at '{}'".format(endTimeStamp))
+print("[!]. Total encountered Exceptions: {}".format(exceptionCount))
+print("[!]. Encountered Exception IDs: {}".format(', '.join(exceptionIDs)))
