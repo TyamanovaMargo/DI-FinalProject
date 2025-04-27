@@ -16,6 +16,7 @@ from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from argparse import ArgumentParser
+from selenium.webdriver.common.by import By
 
 # Настройка логирования
 LOG_FILENAME = 'webScrapper.log'
@@ -36,7 +37,7 @@ def initDirs():
     if not os.path.exists('./tmp'):
         os.mkdir('./tmp')
 
-def scrapUrlData(url, useProxy, delayInterval):
+def scrapUrlData(outFile, useProxy, delayInterval):
     options = Options()
     
     # Устанавливаем прокси, если указан флаг useProxy
@@ -48,7 +49,7 @@ def scrapUrlData(url, useProxy, delayInterval):
 
     # Инициализация драйвера Firefox с параметрами
     driver = webdriver.Firefox(options=options)
-    driver.get(url)
+    driver.get(outFile)
 
     # Задержка между запросами
     if delayInterval:
@@ -62,9 +63,32 @@ def scrapUrlData(url, useProxy, delayInterval):
 
 def collectData(driver):
     # Функция для сбора данных с веб-страницы
-    # Здесь вы должны реализовать логику парсинга страницы
-    # Возвращаем фиктивные данные для примера
-    return [{"name": "sample item", "price": "1000"}]
+    data = []
+
+    try:
+        # Находим все элементы, которые представляют собой объявления
+        items = driver.find_elements(By.CLASS_NAME, 'listing-item')
+
+        # Перебираем все найденные элементы
+        for item in items:
+            try:
+                # Извлекаем название и цену из каждого элемента
+                name = item.find_element(By.CLASS_NAME, 'title').text
+                price = item.find_element(By.CLASS_NAME, 'price').text
+
+                # Добавляем данные в список
+                data.append({"name": name, "price": price})
+
+            except Exception as e:
+                # В случае ошибки (если название или цена не найдены) пропускаем элемент
+                print(f"Error extracting data from item: {e}")
+                continue
+
+    except Exception as e:
+        # В случае ошибки при поиске элементов на странице
+        print(f"Error extracting items from the page: {e}")
+    
+    return data
 
 def dumpDataFile(data, pageNum, outFile):
     if data:
