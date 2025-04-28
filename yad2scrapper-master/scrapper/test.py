@@ -24,14 +24,19 @@ driver.get("https://www.yad2.co.il/realestate/forsale")
 
 # Wait for listings to load
 WebDriverWait(driver, 20).until(
-    EC.presence_of_element_located((By.CSS_SELECTOR, "li[data-testid='item-basic']"))
+    EC.presence_of_element_located((By.CSS_SELECTOR, "li[data-testid='item-basic'][data-nagish='feed-item-list-box']"))
+
 )
 
 # Scroll to load more listings (optional)
-for _ in range(3):
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(2)  # wait for more items to load
-
+# for _ in range(3):
+#     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+#     time.sleep(2)  # wait for more items to load
+# Scroll to load more listings
+def scrolldown(driver, deep):
+    for _ in range(deep):
+        driver.execute_script('window.scrollBy(0,500)')
+        time.sleep(0.1)
 
 def extract_count(parts, parameter):
    
@@ -51,12 +56,18 @@ def extract_count(parts, parameter):
         return None
     
 
-# Get listings
-listings = driver.find_elements(By.CSS_SELECTOR, "li[data-testid='item-basic']")
-
+# Function to get listings from the page
+def get_listings(driver):
+    listings = driver.find_elements(By.CSS_SELECTOR, "li[data-testid='item-basic'][data-nagish='feed-item-list-box']")
+    return listings
 # Create an empty list for all ads
 data = []
 
+# Scroll and collect listings
+scrolldown(driver, 50)  # Adjust this number based on how much you want to scroll
+time.sleep(10)  # wait for more items to load
+# Get listings after scrolling
+listings = get_listings(driver)
 
 for listing in listings:
     try:
@@ -140,7 +151,7 @@ for listing in listings:
 df = pd.DataFrame(data)
 
 # Сохраняем в CSV
-df.to_csv('yad2_listings3.csv', index=False, encoding='utf-8-sig')
+df.to_csv('yad2_listings.csv', index=False, encoding='utf-8-sig')
 
 print("✅ CSV файл сохранен как yad2_listings.csv")
 # Close browser
