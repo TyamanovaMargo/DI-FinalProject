@@ -61,10 +61,10 @@ def get_listings(driver):
 data = []
 
 # Scroll and collect listings
-scroll_depth = 10  # Number of times to scroll down, adjust based on your needs
+scroll_depth = 20  # Number of times to scroll down, adjust based on your needs
 for _ in range(scroll_depth):
     scrolldown(driver, 1)  # Scroll down once
-    time.sleep(3)  # Wait for new elements to load
+    time.sleep(10)  # Wait for new elements to load
     listings = get_listings(driver)  # Get all listings on the current page
 
     for listing in listings:
@@ -149,7 +149,7 @@ for _ in range(scroll_depth):
 df = pd.DataFrame(data)
 
 # Сохраняем в CSV
-df.to_csv('yad2_listings.csv', index=False, encoding='utf-8-sig')
+df.to_csv('yad2_listings1.csv', index=False, encoding='utf-8-sig')
 
 print("✅ CSV файл сохранен как yad2_listings.csv")
 # Close browser
