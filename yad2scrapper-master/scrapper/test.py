@@ -98,7 +98,17 @@ for listing in listings:
         city = parts[2].strip() if len(parts) > 2 else None
     except:
         link = None
-
+    try:
+        tags_div = listing.find_element(By.CLASS_NAME, "item-tags_itemTagsBox__Uz23E")
+        span_tags = tags_div.find_elements(By.TAG_NAME, "span")
+        tags_adiitional_info = [span.text.strip() for span in span_tags]
+        info1 = tags_adiitional_info[0].strip() if len(tags_adiitional_info) > 0 else None
+        info2 = tags_adiitional_info[1].strip() if len(tags_adiitional_info) > 1 else None
+        info3 = tags_adiitional_info[2].strip() if len(tags_adiitional_info) > 2 else None
+        # print(info1)
+    
+    except Exception as e:
+        print(f"Error: {e}")
     # print({
     #     "Title":address,
     #     "Price": price,
@@ -110,7 +120,7 @@ for listing in listings:
     # })
     # add to the list
     data.append({
-        "Title": address,
+        "Address": address,
         "Price": price,
         "Link": link,
         "Property Type": property_type,
@@ -118,7 +128,10 @@ for listing in listings:
         "Floor": floor_count,
         "Area": area_size,
         "City": city,
-        "Neighborhood": neighborhood
+        "Neighborhood": neighborhood,
+        "Tags1": info1,
+        "Tags2": info2,
+        "Tags3": info3,
     })
 
 
@@ -127,8 +140,8 @@ for listing in listings:
 df = pd.DataFrame(data)
 
 # Сохраняем в CSV
-df.to_csv('yad2_listings2.csv', index=False, encoding='utf-8-sig')
+df.to_csv('yad2_listings3.csv', index=False, encoding='utf-8-sig')
 
-print("✅ CSV файл сохранен как yad2_listings2.csv")
+print("✅ CSV файл сохранен как yad2_listings.csv")
 # Close browser
 driver.quit()
