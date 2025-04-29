@@ -8,16 +8,34 @@ from selenium import webdriver
 import time
 import pandas as pd
 import re
+from selenium_stealth import stealth
 
-# Setup Chrome options
-chrome_options = Options()
-chrome_options.add_argument("--headless")  # run in background
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
 
-# Setup Chrome driver (make sure you have chromedriver installed)
-# service = Service('/path/to/chromedriver')  # <<<--- REPLACE with your path
-driver = webdriver.Chrome()
+
+def init_driver():
+    # Setup Chrome options
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # run in background
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+
+    driver = webdriver.Chrome()
+
+    stealth(driver,
+        languages=["en-US", "en"],
+        vendor="Google Inc.",
+        platform="Win32",
+        webgl_vendor="Intel Inc.",
+        renderer="Intel Iris OpenGL Engine",
+        fix_hairline=True,
+    )
+
+    return driver
+
+driver = init_driver()
+
+
+
 
 def smart_scroll(driver, pause_time=1):
         last_height = driver.execute_script("return document.body.scrollHeight")  # Сколько сейчас вся страница в пикселях
@@ -62,12 +80,13 @@ def get_listings(driver):
 # Create an empty list for all ads
 data = []
 
-for page_number in range(1, 50):  # от 1 до 10 страницы
+for page_number in range(40, 60):  # от 1 до 10 страницы
     url = f"https://www.yad2.co.il/realestate/forsale?page={page_number}"
     driver.get(url)
+    time.sleep(2)  # Wait for the page to load
 
     # Wait for listings to load
-    WebDriverWait(driver, 5).until(
+    WebDriverWait(driver, 15).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, "li[data-testid='item-basic'][data-nagish='feed-item-list-box']"))
 
     )
@@ -85,7 +104,10 @@ for page_number in range(1, 50):  # от 1 до 10 страницы
             address = None
 
         try:
-            price = listing.find_element(By.CLASS_NAME, "item-data-content_priceSlot__yzYXU").text
+            price_text = listing.find_element(By.CLASS_NAME, "item-data-content_priceSlot__yzYXU").text
+            price_text = price_text.replace("₪", "NIS").strip()
+            currency, number_str = price_text.split(" ", 1)
+            price_number = int(number_str.replace(",", ""))
         except:
             price = None
 
@@ -119,16 +141,16 @@ for page_number in range(1, 50):  # от 1 до 10 страницы
         except:
             link = None
         try:
-            tags_div = listing.find_element(By.CLASS_NAME, "item-tags_itemTagsBox__Uz23E")
+            tags_div = WebDriverWait(listing, 5).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div[class^='item-tags_itemTagsBox']"))
+            )
             span_tags = tags_div.find_elements(By.TAG_NAME, "span")
             tags_adiitional_info = [span.text.strip() for span in span_tags]
-            info1 = tags_adiitional_info[0].strip() if len(tags_adiitional_info) > 0 else None
-            info2 = tags_adiitional_info[1].strip() if len(tags_adiitional_info) > 1 else None
-            info3 = tags_adiitional_info[2].strip() if len(tags_adiitional_info) > 2 else None
-            # print(info1)
-        
+            info1 = tags_adiitional_info[0] if len(tags_adiitional_info) > 0 else None
+            info2 = tags_adiitional_info[1] if len(tags_adiitional_info) > 1 else None
+            info3 = tags_adiitional_info[2] if len(tags_adiitional_info) > 2 else None
         except Exception as e:
-            print(f"Error: {e}")
+            info1 = info2 = info3 = None
         # print({
         #     "Title":address,
         #     "Price": price,
@@ -141,7 +163,8 @@ for page_number in range(1, 50):  # от 1 до 10 страницы
         # add to the list
         data.append({
             "Address": address,
-            "Price": price,
+            "Price": price_number,
+            "Currency": currency,
             "Link": link,
             "Property Type": property_type,
             "Rooms_count": rooms_count,
@@ -153,8 +176,8 @@ for page_number in range(1, 50):  # от 1 до 10 страницы
             "Tags2": info2,
             "Tags3": info3,
         })
-        # 👉 Добавляем небольшую паузу между страницами
-        time.sleep(3)
+        # pause for a bit to avoid being blocked
+        # time.sleep(5)
 
 
 
@@ -162,7 +185,7 @@ for page_number in range(1, 50):  # от 1 до 10 страницы
 df = pd.DataFrame(data)
 
 # Сохраняем в CSV
-df.to_csv('yad2_listings_fifty.csv', index=False, encoding='utf-8-sig')
+df.to_csv('yad2_listings_3.csv', index=False, encoding='utf-8-sig')
 
 print("✅ CSV saved as yad2_listings.csv")
 # Close browser
