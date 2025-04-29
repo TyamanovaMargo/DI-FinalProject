@@ -9,7 +9,9 @@ import time
 import pandas as pd
 import re
 from selenium_stealth import stealth
-
+import pandas as pd
+import os
+import glob
 
 
 def init_driver():
@@ -38,7 +40,7 @@ driver = init_driver()
 
 
 def smart_scroll(driver, pause_time=1):
-        last_height = driver.execute_script("return document.body.scrollHeight")  # Сколько сейчас вся страница в пикселях
+        last_height = driver.execute_script("return document.body.scrollHeight")  
 
         while True:
             # Прокручиваем вниз до конца
@@ -80,7 +82,7 @@ def get_listings(driver):
 # Create an empty list for all ads
 data = []
 
-for page_number in range(40, 60):  # от 1 до 10 страницы
+for page_number in range(60, 90):  # от 1 до 10 страницы
     url = f"https://www.yad2.co.il/realestate/forsale?page={page_number}"
     driver.get(url)
     time.sleep(2)  # Wait for the page to load
@@ -185,8 +187,11 @@ for page_number in range(40, 60):  # от 1 до 10 страницы
 df = pd.DataFrame(data)
 
 # Сохраняем в CSV
-df.to_csv('yad2_listings_3.csv', index=False, encoding='utf-8-sig')
+output_folder = "/Users/margotiamanova/Desktop/DI-FinalProject/results/raw_results"  # замените на ваш путь
+output_filename = "yad2_listings_4.csv"
+output_path = os.path.join(output_folder, output_filename)
+df.to_csv(output_path, index=False, encoding='utf-8-sig')
 
-print("✅ CSV saved as yad2_listings.csv")
+print(f" CSV saved as {output_path}")
 # Close browser
 driver.quit()
