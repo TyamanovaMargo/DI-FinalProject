@@ -20,7 +20,7 @@ The Israeli real estate market is characterized by high housing prices, signific
 
 ### 📦 Data Collection
 - `Python`
-- `BeautifulSoup`, `Requests` – for basic scraping
+- `Requests` – for basic scraping
 - `Selenium` – for dynamic page handling and anti-bot evasion
 
 ### 🧹 Data Cleaning & Analysis
@@ -29,7 +29,6 @@ The Israeli real estate market is characterized by high housing prices, signific
 
 ### 🛢️ Database
 - `PostgreSQL`
-- `SQLAlchemy` (optional ORM layer)
 
 ### 📈 Modeling & Stats
 - `Statsmodels`
