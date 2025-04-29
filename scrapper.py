@@ -111,7 +111,7 @@ for page_number in range(60, 90):  # от 1 до 10 страницы
             currency, number_str = price_text.split(" ", 1)
             price_number = int(number_str.replace(",", ""))
         except:
-            price = None
+            price_text = None
 
         try:
             link_element = listing.find_element(By.CLASS_NAME, "item-layout_itemLink__CZZ7w")
