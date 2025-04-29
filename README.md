@@ -1,9 +1,8 @@
-# 🏠 Real Estate Market Analysis in Israel (Yad2 / Airbnb)
+# 🏠 Real Estate Market Analysis in Israel (Yad2)
 
 ## 📌 Overview
 The Israeli real estate market is characterized by high housing prices, significant regional disparities, and consistently strong demand. This project focuses on data-driven analysis of housing listings from Israel, primarily sourced from [Yad2.co.il](https://www.yad2.co.il), the country’s leading property listing platform.
 
-In case of scraping limitations due to anti-bot measures, the project will pivot to analyze short-term rental listings on [Airbnb](https://www.airbnb.com), focusing on pricing trends and rental behaviors in major Israeli cities.
 
 ---
 
