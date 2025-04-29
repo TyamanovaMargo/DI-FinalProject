@@ -12,7 +12,7 @@ from selenium_stealth import stealth
 import pandas as pd
 import os
 import glob
-
+from deep_translator import GoogleTranslator
 
 def init_driver():
     # Setup Chrome options
@@ -76,116 +76,119 @@ def extract_count(parts, parameter):
             return None
         
 def get_listings(driver):
-        listings = driver.find_elements(By.CSS_SELECTOR, "li[data-testid='item-basic'][data-nagish='feed-item-list-box']")
+        listings = driver.find_elements(By.CLASS_NAME, "item-layout_feedItemBox__Kvh1y")
         return listings
 
 # Create an empty list for all ads
 data = []
+try:
+    for page_number in range(1, 2):  # от 1 до 10 страницы
+        url = f"https://www.yad2.co.il/realestate/forsale?page={page_number}"
+        driver.get(url)
+        time.sleep(2)  # Wait for the page to load
 
-for page_number in range(60, 90):  # от 1 до 10 страницы
-    url = f"https://www.yad2.co.il/realestate/forsale?page={page_number}"
-    driver.get(url)
-    time.sleep(2)  # Wait for the page to load
+        # Wait for listings to load
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "item-layout_feedItemBox__Kvh1y"))
 
-    # Wait for listings to load
-    WebDriverWait(driver, 15).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, "li[data-testid='item-basic'][data-nagish='feed-item-list-box']"))
+        )
+    
 
-    )
- 
+        smart_scroll(driver)
+        listings = get_listings(driver)  # Get all listings on the current page
+        print(f"Found {len(listings)} listings")
 
-    smart_scroll(driver)
-    listings = get_listings(driver)  # Get all listings on the current page
-    print(f"Found {len(listings)} listings")
+        for listing in listings:
+            try:
+                address = listing.find_element(By.CLASS_NAME, "item-data-content_heading__tphH4").text
 
-    for listing in listings:
-        try:
-            address = listing.find_element(By.CLASS_NAME, "item-data-content_heading__tphH4").text
+            except:
+                address = None
 
-        except:
-            address = None
+            try:
+                price_text = listing.find_element(By.CLASS_NAME, "item-data-content_priceSlot__yzYXU").text
+                price_text = price_text.replace("₪", "NIS").strip()
+                currency, number_str = price_text.split(" ", 1)
+                price_number = int(number_str.replace(",", ""))
+            except:
+                price_text = None
 
-        try:
-            price_text = listing.find_element(By.CLASS_NAME, "item-data-content_priceSlot__yzYXU").text
-            price_text = price_text.replace("₪", "NIS").strip()
-            currency, number_str = price_text.split(" ", 1)
-            price_number = int(number_str.replace(",", ""))
-        except:
-            price_text = None
+            try:
+                link_element = listing.find_element(By.CLASS_NAME, "item-layout_itemLink__CZZ7w")
+                link = link_element.get_attribute("href")
+            except:
+                link = None
+                    
+            try:
+                content = listing.find_element(By.XPATH, './/h2[@data-nagish="content-section-title"]').text
+                parts = content.split('•')
+                # print(parts)
+                area_parts = parts[-1].strip() 
+                area_size = extract_count(area_parts,3)
+                # print(area)   
+                floor_parts = parts[-2].strip()
+                floor_count = extract_count(floor_parts,2)
 
-        try:
-            link_element = listing.find_element(By.CLASS_NAME, "item-layout_itemLink__CZZ7w")
-            link = link_element.get_attribute("href")
-        except:
-            link = None
+                rooms_parts = parts[-3].strip()
+                rooms_count = extract_count(rooms_parts,1)
                 
-        try:
-            content = listing.find_element(By.XPATH, './/h2[@data-nagish="content-section-title"]').text
-            parts = content.split('•')
-            # print(parts)
-            area_parts = parts[-1].strip() 
-            area_size = extract_count(area_parts,3)
-            # print(area)   
-            floor_parts = parts[-2].strip()
-            floor_count = extract_count(floor_parts,2)
+            except:
+                link = None
+            try:
+                property_type = info = listing.find_element(By.XPATH, './/span[contains(@class, "item-data-content_itemInfoLine__AeoPP")]').text
+                parts = property_type.split(',')
+                property_type = parts[0].strip() if len(parts) > 0 else None
+                neighborhood = parts[1].strip() if len(parts) > 1 else None
+                city = parts[2].strip() if len(parts) > 2 else None
+            except:
+                link = None
+            try:
+                tags_div = WebDriverWait(listing, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div[class^='item-tags_itemTagsBox']"))
+                )
+                span_tags = tags_div.find_elements(By.TAG_NAME, "span")
+                tags_adiitional_info = [span.text.strip() for span in span_tags]
+                info1 = tags_adiitional_info[0] if len(tags_adiitional_info) > 0 else None
+                info2 = tags_adiitional_info[1] if len(tags_adiitional_info) > 1 else None
+                info3 = tags_adiitional_info[2] if len(tags_adiitional_info) > 2 else None
+            except Exception as e:
+                info1 = info2 = info3 = None
+            # print({
+            #     "Title":address,
+            #     "Price": price,
+            #     "Link": link,
+            #     "Content": content,
+            #     "Property Type": property_type,
+            #     "City": city,
+            #     "Neighborhood": neighborhood
+            # })
+            # add to the list
+            data.append({
+                "Address": address,
+                "Price": price_number,
+                "Currency": currency,
+                "Link": link,
+                "Property Type": property_type,
+                "Rooms_count": rooms_count,
+                "Floor": floor_count,
+                "Area": area_size,
+                "City": city,
+                "Neighborhood": neighborhood,
+                "Tags1": info1,
+                "Tags2": info2,
+                "Tags3": info3,
+            })
+            # pause for a bit to avoid being blocked
+            # time.sleep(5)
+finally:
+    driver.quit()
 
-            rooms_parts = parts[-3].strip()
-            rooms_count = extract_count(rooms_parts,1)
-            
-        except:
-            link = None
-        try:
-            property_type = info = listing.find_element(By.XPATH, './/span[contains(@class, "item-data-content_itemInfoLine__AeoPP")]').text
-            parts = property_type.split(',')
-            property_type = parts[0].strip() if len(parts) > 0 else None
-            neighborhood = parts[1].strip() if len(parts) > 1 else None
-            city = parts[2].strip() if len(parts) > 2 else None
-        except:
-            link = None
-        try:
-            tags_div = WebDriverWait(listing, 5).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "div[class^='item-tags_itemTagsBox']"))
-            )
-            span_tags = tags_div.find_elements(By.TAG_NAME, "span")
-            tags_adiitional_info = [span.text.strip() for span in span_tags]
-            info1 = tags_adiitional_info[0] if len(tags_adiitional_info) > 0 else None
-            info2 = tags_adiitional_info[1] if len(tags_adiitional_info) > 1 else None
-            info3 = tags_adiitional_info[2] if len(tags_adiitional_info) > 2 else None
-        except Exception as e:
-            info1 = info2 = info3 = None
-        # print({
-        #     "Title":address,
-        #     "Price": price,
-        #     "Link": link,
-        #     "Content": content,
-        #     "Property Type": property_type,
-        #     "City": city,
-        #     "Neighborhood": neighborhood
-        # })
-        # add to the list
-        data.append({
-            "Address": address,
-            "Price": price_number,
-            "Currency": currency,
-            "Link": link,
-            "Property Type": property_type,
-            "Rooms_count": rooms_count,
-            "Floor": floor_count,
-            "Area": area_size,
-            "City": city,
-            "Neighborhood": neighborhood,
-            "Tags1": info1,
-            "Tags2": info2,
-            "Tags3": info3,
-        })
-        # pause for a bit to avoid being blocked
-        # time.sleep(5)
-
-
-
+translator = GoogleTranslator(source='hebrew', target='english')
 # Превращаем список в pandas DataFrame
 df = pd.DataFrame(data)
-
+columns_to_translate = ['Address','Property Type', 'City', 'Neighborhood', 'Tags1', 'Tags2', 'Tags3']
+for col in columns_to_translate:
+    df[col] = df[col].apply(lambda x: translator.translate(str(x)) if pd.notnull(x) else x)
 # Сохраняем в CSV
 output_folder = "/Users/margotiamanova/Desktop/DI-FinalProject/results/raw_results"  # замените на ваш путь
 output_filename = "yad2_listings_4.csv"
@@ -193,5 +196,4 @@ output_path = os.path.join(output_folder, output_filename)
 df.to_csv(output_path, index=False, encoding='utf-8-sig')
 
 print(f" CSV saved as {output_path}")
-# Close browser
-driver.quit()
+
