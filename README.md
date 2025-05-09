@@ -27,8 +27,6 @@ The Israeli real estate market is characterized by high housing prices, signific
 - `Pandas`
 - `NumPy`
 
-### 🛢️ Database
-- `PostgreSQL`
 
 ### 📈 Modeling & Stats
 - `Statsmodels`
@@ -36,7 +34,7 @@ The Israeli real estate market is characterized by high housing prices, signific
 
 ### 📊 Visualization & Dashboard
 - `Tableau` *(preferred for rich interactivity)*
-- `Power BI` *(alternative option)*
+
 
 ---
 
